@@ -7,8 +7,10 @@ av.,Av.
 av,Av.
 c,Calle
 c.,Calle
-C, Calle
-C., Calle
+C,Calle
+C.,Calle
+calle,Calle
+CALLE,Calle
 Ext,Ext.
 ext,Ext.
 Ext.,Ext.
@@ -29,16 +31,25 @@ Lte,Lt.
 Lte.,Lt.
 lte,Lt.
 lte.,Lt.
+Lote,Lt.
+lote,Lt.
+LOTE,Lt.
 MZ,Mz.
 MZ.,Mz.
 mz,Mz.
 mz.,Mz.
 MZA,Mz.
+MZNA,Mz.
+Mzna,Mz.
+MZNA.,Mz.
+Mzna.,Mz.
 MZA.,Mz.
 mza,Mz.
 mza.,Mz.
 M,Mz.
 M.,Mz.
+MANZANA,Mz.
+Manzana,Mz.
 NO.,No.
 No.,No.
 no.,No.
@@ -49,3 +60,11 @@ Num,No.
 Núm,No.
 Num.,No.
 Núm.,No.
+NUM,No.
+NUM.,No.
+NÚM,No.
+NÚM.,No.
+num,No.
+núm,No.
+num.,No.
+núm,.No.
