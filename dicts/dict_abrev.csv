@@ -5,6 +5,8 @@ AV.,Av.
 Av.,Av.
 av.,Av.
 av,Av.
+Avenida,Av.
+avenida,Av.
 c,Calle
 c.,Calle
 C,Calle
@@ -15,6 +17,10 @@ Ext,Ext.
 ext,Ext.
 Ext.,Ext.
 ext.,Ext.
+EXT,Ext.
+EXT.,Ext.
+INT,Int.
+INT.,Int.
 Int,Int.
 int,Int.
 Int.,Int.
@@ -50,6 +56,7 @@ M,Mz.
 M.,Mz.
 MANZANA,Mz.
 Manzana,Mz.
+NO, No.
 NO.,No.
 No.,No.
 no.,No.
@@ -68,3 +75,5 @@ num,No.
 núm,No.
 num.,No.
 núm,.No.
+número,No.
+Número,no.
