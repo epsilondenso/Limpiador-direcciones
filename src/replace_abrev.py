@@ -1,4 +1,7 @@
+#Python
 import re 
+#Este proyecto
+from config import paths as pths
 
 def tokenizar_direccion(direccion: str) -> list[str]:
     """
