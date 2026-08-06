@@ -1,7 +1,7 @@
 import re
 import unicodedata
 import config.paths as pths 
-from config.patrones_a_eliminar import Pattern, PATRONES
+from config.patrones import Pattern, PATRONES
 
 def normalizar(token: str) -> str:
     """
@@ -13,7 +13,7 @@ def normalizar(token: str) -> str:
     - Elimina espacios sobrantes.
     """
 
-    token = token.upper().strip().replace(".", "")
+    token = token.upper().strip().replace(".", "")#.replace("-","")
 
     token = "".join(
         c for c in unicodedata.normalize("NFD", token)

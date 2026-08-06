@@ -7,7 +7,7 @@ from .elim_noise import (
     limpiar_ruido
 )
 
-from config.patrones_a_eliminar import abrev_dict
+from config.patrones import abrev_dict
 
 def elim_caracter(tokens: list[str], caracter: str = "-"):
     new_tokens = [token for token in tokens if token != caracter]
