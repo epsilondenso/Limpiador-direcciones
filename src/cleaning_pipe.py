@@ -9,14 +9,21 @@ from .elim_noise import (
 
 from config.patrones_a_eliminar import abrev_dict
 
+def elim_caracter(tokens: list[str], caracter: str = "-"):
+    new_tokens = [token for token in tokens if token != caracter]
+    return new_tokens
 
-def clean(raw_adress: str) -> list[str]:
+
+def clean(raw_adress: str, elim_caracters: bool = True, caracter = "-") -> list[str]:
 
     """
     raw_adress -> tokenizar -> reemp_abrevs -> limpiar_ruido
+    PARAMS:
+    -raw_adress: Dirección en sucio
+    -caracter: Solo se usa cuando elim_caracters = True
     """
     tokens = tokenizar_direccion(raw_adress)
     tokens = reemplazar_abrevs(tokens, abrev_dict=abrev_dict)
-    tokens = limpiar_ruido(tokens= tokens)
+    tokens = elim_caracter(limpiar_ruido(tokens= tokens), caracter = caracter) if elim_caracter else limpiar_ruido(tokens= tokens)
 
     return tokens
