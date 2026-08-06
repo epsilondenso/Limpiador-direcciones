@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+import pandas as pd
+from .paths import DICCIONARIOS 
 
 @dataclass(frozen=True)
 class Pattern:
@@ -182,4 +184,30 @@ PATRONES = [
         ]
     ),
 
+        Pattern(
+        nombre="Colonia",
+        patron=[
+            {"COLONIA"}
+        ]
+    ),
+
+        Pattern(
+        nombre="Código postal",
+        patron=[
+            {"CP"},
+        ]
+    ),
+
+        Pattern(
+        nombre="De terreno",
+        patron=[
+            {"DE"},
+            {"TERRNO"}
+        ]
+    ),
+
 ]
+
+dict_abrevs_path = DICCIONARIOS / "dict_abrev.csv"
+abrev_df= pd.read_csv(dict_abrevs_path)
+abrev_dict= dict(zip(abrev_df['abrev'], abrev_df['significado']))

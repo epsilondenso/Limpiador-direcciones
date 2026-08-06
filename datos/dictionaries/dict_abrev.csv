@@ -10,10 +10,15 @@ AVENIDA,Av.
 Avenida,Av.
 avenida,Av.
 c.,Calle
-C,Calle
 C.,Calle
 calle,Calle
 CALLE,Calle
+Col.,Colonia
+col.,Colonia
+COL.,Colonia
+COL,Colonia
+Col,Colonia
+col,Colonia
 Ext,Ext.
 ext,Ext.
 Ext.,Ext.
@@ -55,11 +60,18 @@ Mzna.,Mz.
 MZA.,Mz.
 mza,Mz.
 mza.,Mz.
+Mza,Mz.
+Mza.,Mz.
 M,Mz.
 M.,Mz.
 Mz,Mz.
 MANZANA,Mz.
 Manzana,Mz.
+manzana,Mz.
+Mnza,Mz
+Mnza.,Mz.
+MNZA,Mz.
+MNZA.,Mz.
 NO, No.
 NO.,No.
 No.,No.
@@ -85,3 +97,4 @@ NUMERO,No.
 NÚMERO,No.
 VIV,Vivienda
 VIVIENDA,Vivienda
+
