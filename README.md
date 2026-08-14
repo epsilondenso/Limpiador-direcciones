@@ -281,7 +281,7 @@ Pattern(
     ]
 )
 ```
-
+altaltiuminmovalor2025@gmail.com
 De esta manera, el mismo patrón puede reconocer:
 
 ```text
