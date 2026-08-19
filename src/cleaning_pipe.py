@@ -7,14 +7,14 @@ from .elim_noise import (
     limpiar_ruido
 )
 
-from config.patrones import abrev_dict
+from config.patrones import abrev_dict, Pattern, PATRONES
 
 def elim_caracter(tokens: list[str], caracter: str = "-"):
     new_tokens = [token for token in tokens if token != caracter]
     return new_tokens
 
 
-def clean(raw_adress: str, elim_caracters: bool = True, caracter = "-") -> list[str]:
+def clean(raw_adress: str, elim_caracters: bool = True, patterns: list[Pattern] = PATRONES, caracter = "-") -> list[str]:
 
     """
     raw_adress -> tokenizar -> reemp_abrevs -> limpiar_ruido
@@ -24,6 +24,6 @@ def clean(raw_adress: str, elim_caracters: bool = True, caracter = "-") -> list[
     """
     tokens = tokenizar_direccion(raw_adress)
     tokens = reemplazar_abrevs(tokens, abrev_dict=abrev_dict)
-    tokens = elim_caracter(limpiar_ruido(tokens= tokens), caracter = caracter) if elim_caracter else limpiar_ruido(tokens= tokens)
+    tokens = elim_caracter(limpiar_ruido(tokens= tokens, patterns= patterns), caracter = caracter) if elim_caracter else limpiar_ruido(tokens= tokens, patterns=patterns)
 
     return tokens
