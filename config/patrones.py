@@ -137,6 +137,14 @@ PATRONES = [
     ),
 
     Pattern(
+        nombre="Predio urbano",
+        patron=[
+            {"PREDIO"},
+            {"URBANO"},
+        ]
+    ),
+
+    Pattern(
         nombre="Conjunto urbano",
         patron=[
             {"DEL"},
@@ -194,7 +202,7 @@ PATRONES = [
         Pattern(
         nombre="Código postal",
         patron=[
-            {"CP"},
+            {"CP", "C.P", "C.P.", "cp", "c.p."},
         ]
     ),
 
@@ -202,9 +210,15 @@ PATRONES = [
         nombre="De terreno",
         patron=[
             {"DE"},
-            {"TERRNO"}
+            {"TERRENO"}
         ]
     ),
+
+        Pattern(
+            nombre = "Fraccionamiento",
+            patron  =[{"FRACC", "FRACC.", "FRACCIONAMIENTO", "Fraccionamiento"}]
+
+        )
 
 ]
 
