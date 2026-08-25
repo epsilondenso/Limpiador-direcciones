@@ -1,9 +1,7 @@
 import pandas as pd
 from config.paths import DIRECCIONES, DIRECCIONES_CLEAN
 from config.abrev_estados import ESTADOS_MAP
-from config.patrones import PATRONES #Pattern, PATRONES, abrev_dict
-
-#from src.replace_abrev import tokenizar_direccion, reemplazar_abrevs  
+from config.patrones import PATRONES 
 from src.elim_noise import redundant_patterns
 from src.cleaning_pipe import clean
 
@@ -23,7 +21,6 @@ test_new_adress["ESTADO"] = test_new_adress["ESTADO"].replace(ESTADOS_MAP)
 test_new_adress.to_csv(path_or_buf = DIRECCIONES_CLEAN / "universo_direcciones_clean.csv", index=False)
 
 direcciones = test_new_adress.copy()
-#direcciones["tokens"] = direcciones["DIRECCIÓN GARANTÍA"].astype(str).apply(lambda x:reemplazar_abrevs(tokenizar_direccion(x), abrev_dict))
 
 clean_adresses = []
 for i in range(direcciones.shape[0]):
