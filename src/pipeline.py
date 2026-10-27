@@ -6,6 +6,7 @@ from src.elim_noise import redundant_patterns
 from src.cleaning_pipe import clean
 
 
+INDEX_COLUMN = "ID"
 ADDRESS_COLUMN = "DIRECCIÓN GARANTÍA"
 CONTEXT_COLUMNS = ["ESTADO", "MUNICIPIO", "COLONIA", "CP"]
 REQUIRED_COLUMNS = [ADDRESS_COLUMN] + CONTEXT_COLUMNS
@@ -77,9 +78,32 @@ def validate_columns(df: pd.DataFrame) -> None:
         raise ValueError(f"Faltan columnas requeridas: {missing}")
 
 
+def index_raw(raw: pd.DataFrame) -> pd.DataFrame:
+    """
+    Añade al inicio la columna ``INDEX_COLUMN`` con el número de fila (desde 1), para rastrear
+    cada registro tras la limpieza. Si ya existe, se conserva la del archivo.
+
+    Parameters
+    ----------
+    raw : pd.DataFrame
+        Datos crudos.
+
+    Returns
+    -------
+    pd.DataFrame
+        Datos crudos con ``INDEX_COLUMN``.
+    """
+    if INDEX_COLUMN in raw.columns:
+        return raw
+    indexed = raw.copy()
+    indexed.insert(0, INDEX_COLUMN, range(1, len(raw) + 1))
+    return indexed
+
+
 def preprocess(raw: pd.DataFrame) -> pd.DataFrame:
     """
-    Elimina registros sin dirección y duplicados, rellena vacíos y expande abreviaturas de estados.
+    Indexa los datos, elimina registros sin dirección y duplicados, rellena vacíos y expande
+    abreviaturas de estados. Los duplicados se detectan ignorando ``INDEX_COLUMN`` y se conserva el primero.
 
     Parameters
     ----------
@@ -89,10 +113,12 @@ def preprocess(raw: pd.DataFrame) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        Datos preprocesados (vacíos rellenados con ``"Sin info"``).
+        Datos preprocesados (vacíos rellenados con ``"Sin info"``) con ``INDEX_COLUMN``.
     """
     validate_columns(raw)
-    preprocessed = raw.dropna(subset=[ADDRESS_COLUMN]).drop_duplicates().fillna("Sin info")
+    indexed = index_raw(raw)
+    data_columns = [col for col in indexed.columns if col != INDEX_COLUMN]
+    preprocessed = indexed.dropna(subset=[ADDRESS_COLUMN]).drop_duplicates(subset=data_columns).fillna("Sin info")
     preprocessed["ESTADO"] = preprocessed["ESTADO"].replace(ESTADOS_MAP)
     return preprocessed
 

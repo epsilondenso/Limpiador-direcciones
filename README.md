@@ -28,12 +28,13 @@ El CSV de entrada debe contener, al menos, las siguientes columnas (puede tener 
 | `COLONIA`            | Colonia.                          |
 | `CP`                 | Código postal.                    |
 
-La salida es el mismo CSV, preprocesado, con dos columnas adicionales:
+La salida es el mismo CSV, preprocesado, con tres columnas adicionales:
 
+* `ID` (primera columna): número de fila del registro en el CSV crudo, empezando en 1. Si el CSV ya trae una columna `ID`, se conserva la suya. Permite rastrear qué registros se conservaron: los `ID` ausentes en la salida corresponden a filas descartadas (sin dirección o duplicadas).
 * `DIRECCIÓN LIMPIA`: la dirección limpia.
 * `AVISOS`: señala direcciones que conviene revisar a mano, sin modificarlas: `Dirección vacía`, `Sin número` (ni dígitos ni `S/N`) y `Demasiado larga (posible texto legal)` (más de `MAX_TOKENS` = 25 tokens, en `src/pipeline.py`). Si hay varios, se separan con `; `.
 
-Las listas de columnas están definidas en `src/pipeline.py` (`REQUIRED_COLUMNS`, `OUTPUT_COLUMN`).
+Las columnas están definidas en `src/pipeline.py` (`INDEX_COLUMN`, `REQUIRED_COLUMNS`, `OUTPUT_COLUMN`, `WARNINGS_COLUMN`).
 
 ---
 
@@ -48,7 +49,10 @@ CSV crudo
 Validación de columnas
    │
    ▼
-Preprocesamiento: se descartan filas sin dirección y duplicados,
+Indexado: columna ID con el número de fila
+   │
+   ▼
+Preprocesamiento: se descartan filas sin dirección y duplicados (ignorando el ID),
 se rellenan los vacíos con "Sin info" y se expanden las abreviaturas de estados
    │
    ▼
@@ -334,7 +338,7 @@ La forma más sencilla de usar el proyecto es la app de Streamlit. Desde la raí
 streamlit run app.py
 ```
 
-La app permite subir un CSV con las columnas requeridas (ver [Formato de entrada](#formato-de-entrada)), limpiarlo con una barra de progreso, ver una vista previa y descargar el CSV con la columna `DIRECCIÓN LIMPIA`.
+La app permite subir un CSV con las columnas requeridas (ver [Formato de entrada](#formato-de-entrada)), limpiarlo con una barra de progreso, ver una vista previa y descargar el CSV con la columna `DIRECCIÓN LIMPIA`. También permite descargar el CSV original con la columna `ID` añadida, para cruzarlo con el limpio.
 
 * Acepta CSV en UTF-8 o en cp1252 (el formato que suele generar Excel en Windows).
 * Todas las columnas se leen como texto.
@@ -390,7 +394,10 @@ El resultado se almacena en:
 datos/direcciones_clean/universo_direcciones_clean.csv
 ```
 
-Además se guarda la versión preprocesada (sin la columna limpia) en `datos/direcciones_clean/universo_direcciones_preprocessed.csv`.
+Además se guardan:
+
+* el CSV crudo con la columna `ID`, en `datos/direcciones_raw/universo_direcciones_indexed.csv`;
+* la versión preprocesada (con `ID`, sin la columna limpia), en `datos/direcciones_clean/universo_direcciones_preprocessed.csv`.
 
 Se ejecuta desde la raíz del proyecto:
 
@@ -405,6 +412,7 @@ from src.clean_adresses_file import clean_adresses_file
 
 clean_adresses_file(
     input_path="entrada.csv",
+    indexed_path=None,        # None para no guardar el crudo indexado
     preprocessed_path=None,   # None para no guardar el preprocesado
     output_path="salida.csv",
 )

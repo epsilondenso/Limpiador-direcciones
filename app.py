@@ -1,7 +1,8 @@
 from pathlib import Path
 import pandas as pd
 import streamlit as st
-from src.pipeline import REQUIRED_COLUMNS, ADDRESS_COLUMN, OUTPUT_COLUMN, WARNINGS_COLUMN, clean_addresses_df
+from src.pipeline import (INDEX_COLUMN, REQUIRED_COLUMNS, ADDRESS_COLUMN, OUTPUT_COLUMN, WARNINGS_COLUMN,
+                          index_raw, clean_addresses_df)
 
 
 def read_csv(file) -> pd.DataFrame:
@@ -40,6 +41,10 @@ que ya tienen su propia columna. El resultado se añade en la columna **`{OUTPUT
 La columna **`{WARNINGS_COLUMN}`** señala direcciones que conviene revisar a mano
 (vacías, sin número o demasiado largas); esas direcciones no se modifican de más.
 
+Cada fila recibe un **`{INDEX_COLUMN}`** con su número de fila en el archivo original (o se usa la columna
+`{INDEX_COLUMN}` del archivo, si ya la tiene). El CSV limpio lo conserva, así que puedes rastrear qué
+registros se mantuvieron; también puedes descargar el CSV original con el `{INDEX_COLUMN}` añadido.
+
 **Columnas requeridas** (puede tener otras; se conservan):
 {", ".join(f"`{col}`" for col in REQUIRED_COLUMNS)}
 """
@@ -48,7 +53,7 @@ La columna **`{WARNINGS_COLUMN}`** señala direcciones que conviene revisar a ma
 uploaded = st.file_uploader("CSV de direcciones", type="csv")
 
 if uploaded is not None:
-    raw = read_csv(uploaded)
+    raw = index_raw(read_csv(uploaded))
 
     missing = [col for col in REQUIRED_COLUMNS if col not in raw.columns]
     if missing:
@@ -62,22 +67,36 @@ if uploaded is not None:
         cleaned = clean_addresses_df(raw, progress=lambda p: bar.progress(p, text="Limpiando direcciones…"))
         bar.empty()
         #El CSV se genera una sola vez para que la descarga no dependa de reejecuciones de la app
-        st.session_state["result"] = (uploaded.name, cleaned, cleaned.to_csv(index=False).encode("utf-8-sig"))
+        st.session_state["result"] = (
+            uploaded.name,
+            cleaned,
+            cleaned.to_csv(index=False).encode("utf-8-sig"),
+            raw.to_csv(index=False).encode("utf-8-sig"),
+        )
 
     result = st.session_state.get("result")
     if result is not None and result[0] == uploaded.name:
-        name, cleaned, csv_bytes = result
+        name, cleaned, csv_bytes, raw_bytes = result
         st.success(f"Listo: {len(cleaned):,} direcciones limpias ({len(raw) - len(cleaned):,} filas descartadas).")
         con_avisos = cleaned[cleaned[WARNINGS_COLUMN] != ""]
         if len(con_avisos):
             st.warning(f"{len(con_avisos):,} direcciones tienen avisos y conviene revisarlas.")
         solo_avisos = st.toggle("Ver solo direcciones con avisos", disabled=con_avisos.empty)
         preview = con_avisos if solo_avisos else cleaned
-        st.dataframe(preview[[ADDRESS_COLUMN, OUTPUT_COLUMN, WARNINGS_COLUMN]].head(50), hide_index=True)
-        st.download_button(
+        st.dataframe(preview[[INDEX_COLUMN, ADDRESS_COLUMN, OUTPUT_COLUMN, WARNINGS_COLUMN]].head(50), hide_index=True)
+        col_limpio, col_crudo = st.columns(2)
+        col_limpio.download_button(
             "Descargar CSV limpio",
             data=csv_bytes,
             file_name=f"{Path(name).stem}_limpio.csv",
+            mime="text/csv",
+            type="primary",
+            on_click="ignore",
+        )
+        col_crudo.download_button(
+            "Descargar CSV original indexado",
+            data=raw_bytes,
+            file_name=f"{Path(name).stem}_indexado.csv",
             mime="text/csv",
             on_click="ignore",
         )
