@@ -4,6 +4,18 @@ from .paths import DICCIONARIOS
 
 @dataclass(frozen=True)
 class Pattern:
+    """
+    Secuencia de tokens considerada ruido.
+
+    Attributes
+    ----------
+    nombre : str
+        Nombre descriptivo del patrón.
+    patron : list[set[str]]
+        Un conjunto de variantes válidas (normalizadas) por posición.
+    action : str
+        Acción a aplicar (actualmente solo ``"delete"``).
+    """
     nombre: str
     patron: list[set[str]]
     action: str = "delete"

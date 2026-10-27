@@ -16,9 +16,48 @@ El objetivo de este proyecto es transformar estas direcciones en una representac
 
 ---
 
+## Formato de entrada
+
+El CSV de entrada debe contener, al menos, las siguientes columnas (puede tener más; se conservan):
+
+| Columna              | Contenido                         |
+| -------------------- | --------------------------------- |
+| `DIRECCIÓN GARANTÍA` | Dirección cruda a limpiar.        |
+| `ESTADO`             | Estado (nombre o abreviatura).    |
+| `MUNICIPIO`          | Municipio.                        |
+| `COLONIA`            | Colonia.                          |
+| `CP`                 | Código postal.                    |
+
+La salida es el mismo CSV, preprocesado, con una columna adicional `DIRECCIÓN LIMPIA`.
+
+Las listas de columnas están definidas en `src/pipeline.py` (`REQUIRED_COLUMNS`, `OUTPUT_COLUMN`).
+
+---
+
 ## Pipeline
 
-El proceso principal sigue las siguientes etapas:
+A nivel de archivo, el proceso es:
+
+```text
+CSV crudo
+   │
+   ▼
+Validación de columnas
+   │
+   ▼
+Preprocesamiento: se descartan filas sin dirección y duplicados,
+se rellenan los vacíos con "Sin info" y se expanden las abreviaturas de estados
+   │
+   ▼
+Limpieza de cada dirección (ver abajo)
+   │
+   ▼
+Unión de tokens → columna DIRECCIÓN LIMPIA
+```
+
+Para cada dirección, además de los patrones genéricos, se eliminan como redundantes el estado, el municipio, la colonia y el CP de su propio registro, ya que esa información existe en sus columnas.
+
+La limpieza de una dirección individual sigue las siguientes etapas:
 
 ```text
 Dirección original
@@ -122,7 +161,8 @@ El pipeline permite eliminar determinados caracteres que aparecen como separador
 Por defecto se elimina el guion:
 
 ```python
-tokens = clean(direccion)
+tokens = clean(direccion)                        # elimina "-"
+tokens = clean(direccion, elim_caracters=False)  # lo conserva
 ```
 
 ## Estructura del proyecto
@@ -131,6 +171,7 @@ tokens = clean(direccion)
 LIMPIEZA_DIRECCIONES/
 │
 ├── config/
+│   ├── abrev_estados.py
 │   ├── paths.py
 │   └── patrones.py
 │
@@ -152,6 +193,7 @@ LIMPIEZA_DIRECCIONES/
 │   ├── cleaning_pipe.py
 │   ├── clean_adresses_file.py
 │   ├── elim_noise.py
+│   ├── pipeline.py
 │   ├── replace_abrev.py
 │   └── __init__.py
 │
@@ -171,16 +213,20 @@ Contiene la lógica principal del proyecto.
   Normalización de tokens, búsqueda de patrones y eliminación de expresiones consideradas ruido.
 
 * **`cleaning_pipe.py`**
-  Integra las diferentes etapas en un único pipeline.
+  Integra las diferentes etapas en un único pipeline para **una** dirección (`clean`).
+
+* **`pipeline.py`**
+  Procesamiento de un `DataFrame` completo, sin lectura ni escritura de archivos: validación de columnas (`validate_columns`), preprocesamiento (`preprocess`) y limpieza (`clean_addresses_df`). Es el punto de entrada pensado para la app.
 
 * **`clean_adresses_file.py`**
-  Script para realizar el procesamiento de un archivo de direcciones.
+  Envoltorio de `pipeline.py` que lee un CSV de disco y guarda los resultados.
 
 ### `config/`
 
 Contiene configuraciones y reglas utilizadas por el pipeline.
 
 * **`paths.py`**: define las rutas principales del proyecto.
+* **`abrev_estados.py`**: mapa de abreviaturas de estados a su nombre completo (`ESTADOS_MAP`).
 * **`patrones.py`**: contiene los patrones utilizados para identificar y eliminar ruido, así como la carga del diccionario de abreviaturas.
 
 ### `datos/`
@@ -231,6 +277,22 @@ print(tokens)
 
 La función devuelve una lista de tokens, lo que permite realizar transformaciones adicionales antes de reconstruir la dirección.
 
+### Procesamiento de un `DataFrame`
+
+Para integrar el pipeline en otra aplicación (por ejemplo, Streamlit) se usa `clean_addresses_df`, que recibe y devuelve un `DataFrame` sin tocar el disco:
+
+```python
+import pandas as pd
+from src.pipeline import clean_addresses_df
+
+raw = pd.read_csv(archivo, dtype=str)   # ruta o archivo en memoria
+cleaned = clean_addresses_df(raw)       # lanza ValueError si faltan columnas
+```
+
+Se recomienda leer con `dtype=str` para que columnas como `CP` no se interpreten como números (p. ej. `32551.0`).
+
+Las rutas de `config/` se resuelven a partir de la ubicación del propio paquete, por lo que el pipeline funciona sin importar el directorio de trabajo, siempre que la raíz del proyecto esté en el `PYTHONPATH`.
+
 ### Procesamiento de un archivo
 
 El proyecto incluye un script para procesar el universo de direcciones localizado en:
@@ -245,7 +307,25 @@ El resultado se almacena en:
 datos/direcciones_clean/universo_direcciones_clean.csv
 ```
 
-El procesamiento elimina registros sin dirección y duplicados antes de generar el archivo de salida.
+Además se guarda la versión preprocesada (sin la columna limpia) en `datos/direcciones_clean/universo_direcciones_preprocessed.csv`.
+
+Se ejecuta desde la raíz del proyecto:
+
+```bash
+python -m src.clean_adresses_file
+```
+
+O, con otras rutas:
+
+```python
+from src.clean_adresses_file import clean_adresses_file
+
+clean_adresses_file(
+    input_path="entrada.csv",
+    preprocessed_path=None,   # None para no guardar el preprocesado
+    output_path="salida.csv",
+)
+```
 
 ---
 
@@ -281,7 +361,6 @@ Pattern(
     ]
 )
 ```
-altaltiuminmovalor2025@gmail.com
 De esta manera, el mismo patrón puede reconocer:
 
 ```text
@@ -348,6 +427,8 @@ El proyecto se encuentra en desarrollo. Actualmente el pipeline contempla:
 * [x] Eliminación de ruido textual.
 * [x] Eliminación configurable de caracteres.
 * [x] Procesamiento de archivos de direcciones.
+* [x] Procesamiento de `DataFrame` en memoria (base para la app).
+* [ ] App de Streamlit para subir un CSV y descargar la versión limpia.
 * [ ] Reconstrucción de una representación final estandarizada de la dirección.
 * [ ] Validación de los resultados.
 * [ ] Ampliación y refinamiento de reglas de limpieza.

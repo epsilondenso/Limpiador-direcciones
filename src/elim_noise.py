@@ -1,7 +1,5 @@
-import re
 import unicodedata
 import pandas as pd
-import config.paths as pths 
 from config.patrones import Pattern, PATRONES
 from src.replace_abrev import tokenizar_direccion
 
@@ -9,10 +7,17 @@ def normalizar(token: str) -> str:
     """
     Normaliza un token para facilitar comparaciones.
 
-    - Convierte a mayúsculas.
-    - Elimina acentos.
-    - Elimina puntos.
-    - Elimina espacios sobrantes.
+    Convierte a mayúsculas y elimina espacios sobrantes, puntos y acentos.
+
+    Parameters
+    ----------
+    token : str
+        Token a normalizar.
+
+    Returns
+    -------
+    str
+        Token normalizado.
     """
 
     token = token.upper().strip().replace(".", "")#.replace("-","")
@@ -24,9 +29,24 @@ def normalizar(token: str) -> str:
 
     return token
 
-def match(tokens: list[str], pattern: Pattern, i:int) -> bool:
+def match(tokens: list[str], pattern: Pattern, i: int) -> bool:
+    """
+    Comprueba si una lista de tokens, a partir del i-ésimo token, coincide con un patrón dado.
 
-    """Comprueba si una lista de tokens, a partir del i-ésimo token, coincide con un patrón dado."""
+    Parameters
+    ----------
+    tokens : list[str]
+        Lista de tokens.
+    pattern : Pattern
+        Patrón a comparar.
+    i : int
+        Posición inicial en ``tokens``.
+
+    Returns
+    -------
+    bool
+        ``True`` si hay coincidencia.
+    """
 
     secuencia = pattern.patron
 
@@ -42,7 +62,18 @@ def match(tokens: list[str], pattern: Pattern, i:int) -> bool:
 def buscar_match(tokens: list[str], pattern: Pattern) -> int | None:
     """
     Busca la primera posición en la que una lista de tokens hace match con un patrón dado.
-    Puede recibir la lista completa de tokens
+
+    Parameters
+    ----------
+    tokens : list[str]
+        Lista de tokens.
+    pattern : Pattern
+        Patrón a buscar.
+
+    Returns
+    -------
+    int | None
+        Índice de la primera coincidencia, o ``None`` si no hay.
     """
 
     for i in range(len(tokens)):
@@ -51,12 +82,41 @@ def buscar_match(tokens: list[str], pattern: Pattern) -> int | None:
     return None
 
 def eliminar_rango(tokens: list[str], start: int, long: int) -> list[str]:
+    """
+    Elimina ``long`` tokens a partir de la posición ``start``.
+
+    Parameters
+    ----------
+    tokens : list[str]
+        Lista de tokens.
+    start : int
+        Posición inicial.
+    long : int
+        Número de tokens a eliminar.
+
+    Returns
+    -------
+    list[str]
+        Tokens sin el rango eliminado.
+    """
 
     return tokens[:start] + tokens[start+long:]
 
 def eliminar_patron(tokens: list[str], pattern: Pattern) -> list[str]:
     """
     Elimina la primera ocurrencia de un patrón en una lista de tokens.
+
+    Parameters
+    ----------
+    tokens : list[str]
+        Lista de tokens.
+    pattern : Pattern
+        Patrón a eliminar.
+
+    Returns
+    -------
+    list[str]
+        Tokens sin la primera ocurrencia del patrón.
     """
 
     start = buscar_match(tokens, pattern)
@@ -64,10 +124,22 @@ def eliminar_patron(tokens: list[str], pattern: Pattern) -> list[str]:
         return eliminar_rango(tokens, start, len(pattern.patron))
     else:
         return tokens
-    
+
 def limpiar_ruido(tokens: list[str], patterns: list[Pattern] = PATRONES) -> list[str]:
     """
-    Recorre toda la lista de patrones, elimina todas las primeras apariciones
+    Recorre la lista de patrones y elimina la primera aparición de cada uno.
+
+    Parameters
+    ----------
+    tokens : list[str]
+        Lista de tokens.
+    patterns : list[Pattern]
+        Patrones a eliminar, aplicados en orden.
+
+    Returns
+    -------
+    list[str]
+        Tokens sin ruido.
     """
 
     for i in range(len(patterns)):
@@ -75,10 +147,28 @@ def limpiar_ruido(tokens: list[str], patterns: list[Pattern] = PATRONES) -> list
     return tokens
 
 def redundant_patterns(adresses_df: pd.DataFrame, columns: list[str], adress_index: int) -> list[Pattern]:
+    """
+    Construye patrones a partir de los valores de ``columns`` de un registro (p. ej. estado, municipio),
+    para eliminarlos de su dirección por ser redundantes.
+
+    Parameters
+    ----------
+    adresses_df : pd.DataFrame
+        Datos de direcciones.
+    columns : list[str]
+        Columnas cuyos valores se consideran redundantes.
+    adress_index : int
+        Índice (etiqueta) del registro.
+
+    Returns
+    -------
+    list[Pattern]
+        Un patrón por columna.
+    """
 
     red_ptrns = []
     for columna in columns:
-        direccion = adresses_df.loc[adress_index, columna]
+        direccion = str(adresses_df.loc[adress_index, columna])
         tokens = tokenizar_direccion(direccion)
         norm_tokens = [normalizar(token) for token in tokens]
         red_ptrns.append(Pattern(nombre = direccion, patron=[{token} for token in norm_tokens]))

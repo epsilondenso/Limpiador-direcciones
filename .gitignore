@@ -1,2 +1,11 @@
 .xlsx
 __pycache__
+# Notebooks
+notebooks/
+
+# CSVs en la raiz
+/*.csv
+
+# CSVs de direcciones
+datos/direcciones_raw/*.csv
+datos/direcciones_clean/*.csv

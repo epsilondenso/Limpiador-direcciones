@@ -1,16 +1,19 @@
 #Python
-import re 
-#Este proyecto
-from config import paths as pths
+import re
 
 def tokenizar_direccion(direccion: str) -> list[str]:
     """
-    Tokeniza una dirección. Cada token puede ser una palabra, un número o un guión.
+    Tokeniza una dirección. Cada token puede ser una palabra, un número, un guion, ``/`` o ``#``.
 
-    PARAMS:
-        -direccion: str. Dirección a tokenizar.
-    RETURNS:
-        -tokens: list[str]. Lista de tokens.
+    Parameters
+    ----------
+    direccion : str
+        Dirección a tokenizar.
+
+    Returns
+    -------
+    list[str]
+        Lista de tokens.
     """
 
     tokens = re.findall(r"[A-Za-zÁÉÍÓÚÑáéíóúñ\.]+|\d+|[-/]|[#/]", direccion)
@@ -20,11 +23,17 @@ def reemplazar_abrevs(tokens: list[str], abrev_dict: dict[str, str]) -> list[str
     """
     Reemplaza las abreviaturas en una lista de tokens por su significado.
 
-    PARAMS:
-        -tokens: list[str]. Lista de tokens.
-        -abrev_dict: dict[str, str]. Diccionario de abreviaturas y sus significados.
-    RETURNS:
-        -nuevos_tokens: list[str]. Lista de tokens con las abreviaturas reemplazadas.
+    Parameters
+    ----------
+    tokens : list[str]
+        Lista de tokens.
+    abrev_dict : dict[str, str]
+        Diccionario ``{abreviatura: significado}``.
+
+    Returns
+    -------
+    list[str]
+        Lista de tokens con las abreviaturas reemplazadas.
     """
 
     nuevos_tokens = []
