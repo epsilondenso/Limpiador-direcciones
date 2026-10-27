@@ -7,6 +7,10 @@ from .elim_noise import (
     limpiar_ruido
 )
 
+from .elim_duplicados import (
+    eliminar_duplicados
+)
+
 from config.patrones import abrev_dict, Pattern, PATRONES
 
 def elim_caracter(tokens: list[str], caracter: str = "-") -> list[str]:
@@ -29,9 +33,11 @@ def elim_caracter(tokens: list[str], caracter: str = "-") -> list[str]:
     return new_tokens
 
 
-def clean(raw_adress: str, elim_caracters: bool = True, patterns: list[Pattern] = PATRONES, caracter: str = "-") -> list[str]:
+def clean(raw_adress: str, elim_caracters: bool = True, patterns: list[Pattern] = PATRONES, caracter: str = "-",
+          elim_duplicados: bool = True) -> list[str]:
     """
-    Limpia una dirección: tokenizar -> reemplazar abreviaturas -> limpiar ruido -> eliminar carácter.
+    Limpia una dirección: tokenizar -> reemplazar abreviaturas -> limpiar ruido -> eliminar carácter
+    -> eliminar palabras clave duplicadas.
 
     Parameters
     ----------
@@ -43,6 +49,8 @@ def clean(raw_adress: str, elim_caracters: bool = True, patterns: list[Pattern] 
         Patrones de ruido a eliminar.
     caracter : str
         Carácter a eliminar; solo se usa cuando ``elim_caracters=True``.
+    elim_duplicados : bool
+        Si es ``True``, elimina palabras clave duplicadas (ver ``eliminar_duplicados``).
 
     Returns
     -------
@@ -54,5 +62,7 @@ def clean(raw_adress: str, elim_caracters: bool = True, patterns: list[Pattern] 
     tokens = limpiar_ruido(tokens=tokens, patterns=patterns)
     if elim_caracters:
         tokens = elim_caracter(tokens, caracter=caracter)
+    if elim_duplicados:
+        tokens = eliminar_duplicados(tokens)
 
     return tokens

@@ -75,6 +75,9 @@ Reemplazo de abreviaturas
 Eliminación de caracteres
        │
        ▼
+Eliminación de duplicados
+       │
+       ▼
 Dirección limpia
 ```
 
@@ -165,6 +168,17 @@ tokens = clean(direccion)                        # elimina "-"
 tokens = clean(direccion, elim_caracters=False)  # lo conserva
 ```
 
+### 5. Eliminación de duplicados
+
+Las palabras clave son los significados del diccionario de abreviaturas (`Calle`, `Av.`, `No.`, `Mz.`, `Lt.`, `Int.`, `Ext.`, …). Se eliminan sus duplicados sin perder información:
+
+1. **Repeticiones consecutivas**: `Calle Calle 16` → `Calle 16`.
+2. **Pares palabra clave-valor repetidos**: `Mz. 8 Lt. 11 … Mz. 8` → `Mz. 8 Lt. 11 …`. El valor es el primer token que no es palabra clave, así que `No. Ext. 4126 No. Int. A` se conserva.
+
+Las repeticiones con valores distintos (`Mz. XLI Mz. 41`, `Lt. 29 y parte del Lt. 30`) se conservan, porque contienen información distinta. Las palabras clave cuyo valor es un nombre de varias palabras (`KEYWORDS_NOMBRE` en `config/patrones.py`: `Calle`, `Av.`, `Colonia`, `Municipio`) solo pasan por el punto 1; si no, `ENTRE Av. LAGUNA EL MANGAL` perdería parte del nombre.
+
+Se puede desactivar con `clean(direccion, elim_duplicados=False)`.
+
 ## Estructura del proyecto
 
 ```text
@@ -192,11 +206,13 @@ LIMPIEZA_DIRECCIONES/
 ├── src/
 │   ├── cleaning_pipe.py
 │   ├── clean_adresses_file.py
+│   ├── elim_duplicados.py
 │   ├── elim_noise.py
 │   ├── pipeline.py
 │   ├── replace_abrev.py
 │   └── __init__.py
 │
+├── app.py
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -211,6 +227,9 @@ Contiene la lógica principal del proyecto.
 
 * **`elim_noise.py`**
   Normalización de tokens, búsqueda de patrones y eliminación de expresiones consideradas ruido.
+
+* **`elim_duplicados.py`**
+  Eliminación de palabras clave duplicadas.
 
 * **`cleaning_pipe.py`**
   Integra las diferentes etapas en un único pipeline para **una** dirección (`clean`).
@@ -253,11 +272,28 @@ Instalar las dependencias mediante:
 pip install -r requirements.txt
 ```
 
-Actualmente el proyecto utiliza principalmente:
+Actualmente el proyecto utiliza:
 
 ```text
 pandas==2.3.1
+streamlit==1.60.0
 ```
+
+---
+
+## App
+
+La forma más sencilla de usar el proyecto es la app de Streamlit. Desde la raíz del proyecto:
+
+```bash
+streamlit run app.py
+```
+
+La app permite subir un CSV con las columnas requeridas (ver [Formato de entrada](#formato-de-entrada)), limpiarlo con una barra de progreso, ver una vista previa y descargar el CSV con la columna `DIRECCIÓN LIMPIA`.
+
+* Acepta CSV en UTF-8 o en cp1252 (el formato que suele generar Excel en Windows).
+* Todas las columnas se leen como texto.
+* El CSV descargado está en UTF-8 con BOM, para que Excel muestre bien los acentos.
 
 ---
 
@@ -288,6 +324,8 @@ from src.pipeline import clean_addresses_df
 raw = pd.read_csv(archivo, dtype=str)   # ruta o archivo en memoria
 cleaned = clean_addresses_df(raw)       # lanza ValueError si faltan columnas
 ```
+
+Se puede pasar `progress`, una función que recibe la fracción procesada (entre 0 y 1), para mostrar el avance.
 
 Se recomienda leer con `dtype=str` para que columnas como `CP` no se interpreten como números (p. ej. `32551.0`).
 
@@ -426,9 +464,10 @@ El proyecto se encuentra en desarrollo. Actualmente el pipeline contempla:
 * [x] Detección de patrones.
 * [x] Eliminación de ruido textual.
 * [x] Eliminación configurable de caracteres.
+* [x] Eliminación de palabras clave duplicadas.
 * [x] Procesamiento de archivos de direcciones.
 * [x] Procesamiento de `DataFrame` en memoria (base para la app).
-* [ ] App de Streamlit para subir un CSV y descargar la versión limpia.
+* [x] App de Streamlit para subir un CSV y descargar la versión limpia.
 * [ ] Reconstrucción de una representación final estandarizada de la dirección.
 * [ ] Validación de los resultados.
 * [ ] Ampliación y refinamiento de reglas de limpieza.

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import pandas as pd
 from config.abrev_estados import ESTADOS_MAP
 from config.patrones import PATRONES
@@ -67,7 +68,7 @@ def preprocess(raw: pd.DataFrame) -> pd.DataFrame:
     return preprocessed
 
 
-def clean_addresses_df(raw: pd.DataFrame) -> pd.DataFrame:
+def clean_addresses_df(raw: pd.DataFrame, progress: Callable[[float], None] | None = None) -> pd.DataFrame:
     """
     Preprocesa los datos y añade la columna ``OUTPUT_COLUMN`` con la dirección limpia.
 
@@ -78,6 +79,8 @@ def clean_addresses_df(raw: pd.DataFrame) -> pd.DataFrame:
     ----------
     raw : pd.DataFrame
         Datos crudos con las columnas de ``REQUIRED_COLUMNS``.
+    progress : Callable[[float], None] | None
+        Función opcional que recibe la fracción procesada (entre 0 y 1), p. ej. para una barra de progreso.
 
     Returns
     -------
@@ -85,12 +88,16 @@ def clean_addresses_df(raw: pd.DataFrame) -> pd.DataFrame:
         Datos preprocesados con la columna ``OUTPUT_COLUMN`` añadida.
     """
     cleaned = preprocess(raw)
+    total = len(cleaned)
+    step = max(total // 100, 1)
 
     clean_adresses = []
-    for index in cleaned.index:
+    for i, index in enumerate(cleaned.index, start=1):
         red_ptrns = redundant_patterns(cleaned, CONTEXT_COLUMNS, index)
         clean_tokens = clean(raw_adress=cleaned.loc[index, ADDRESS_COLUMN], patterns=PATRONES + red_ptrns)
         clean_adresses.append(join_tokens(clean_tokens))
+        if progress is not None and (i % step == 0 or i == total):
+            progress(i / total)
     cleaned[OUTPUT_COLUMN] = clean_adresses
 
     return cleaned

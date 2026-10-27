@@ -234,6 +234,10 @@ PATRONES = [
 
 ]
 
+#Palabras clave (normalizadas) cuyo valor es un nombre de varias palabras (p. ej. "Calle LOS PINOS").
+#Para ellas solo se eliminan repeticiones consecutivas, no repeticiones con el mismo valor.
+KEYWORDS_NOMBRE = {"CALLE", "AV", "COLONIA", "MUNICIPIO"}
+
 dict_abrevs_path = DICCIONARIOS / "dict_abrev.csv"
 abrev_df= pd.read_csv(dict_abrevs_path)
 abrev_dict= dict(zip(abrev_df['abrev'], abrev_df['significado']))
