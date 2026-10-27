@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 import streamlit as st
-from src.pipeline import REQUIRED_COLUMNS, ADDRESS_COLUMN, OUTPUT_COLUMN, clean_addresses_df
+from src.pipeline import REQUIRED_COLUMNS, ADDRESS_COLUMN, OUTPUT_COLUMN, WARNINGS_COLUMN, clean_addresses_df
 
 
 def read_csv(file) -> pd.DataFrame:
@@ -34,8 +34,11 @@ Sube un CSV con direcciones en crudo y descarga una versión con la dirección l
 
 **Cómo funciona:** se descartan filas sin dirección y duplicadas, y en cada dirección se
 expanden abreviaturas (`AV` → `Av.`), se quitan expresiones de relleno
-("ubicado en", "predio urbano"…) y se eliminan el estado, municipio, colonia y CP,
+("ubicado en", "predio urbano"…), los datos repetidos y el estado, municipio, colonia y CP,
 que ya tienen su propia columna. El resultado se añade en la columna **`{OUTPUT_COLUMN}`**.
+
+La columna **`{WARNINGS_COLUMN}`** señala direcciones que conviene revisar a mano
+(vacías, sin número o demasiado largas); esas direcciones no se modifican de más.
 
 **Columnas requeridas** (puede tener otras; se conservan):
 {", ".join(f"`{col}`" for col in REQUIRED_COLUMNS)}
@@ -58,16 +61,23 @@ if uploaded is not None:
         bar = st.progress(0.0, text="Limpiando direcciones…")
         cleaned = clean_addresses_df(raw, progress=lambda p: bar.progress(p, text="Limpiando direcciones…"))
         bar.empty()
-        st.session_state["result"] = (uploaded.name, cleaned)
+        #El CSV se genera una sola vez para que la descarga no dependa de reejecuciones de la app
+        st.session_state["result"] = (uploaded.name, cleaned, cleaned.to_csv(index=False).encode("utf-8-sig"))
 
     result = st.session_state.get("result")
     if result is not None and result[0] == uploaded.name:
-        name, cleaned = result
+        name, cleaned, csv_bytes = result
         st.success(f"Listo: {len(cleaned):,} direcciones limpias ({len(raw) - len(cleaned):,} filas descartadas).")
-        st.dataframe(cleaned[[ADDRESS_COLUMN, OUTPUT_COLUMN]].head(20), hide_index=True)
+        con_avisos = cleaned[cleaned[WARNINGS_COLUMN] != ""]
+        if len(con_avisos):
+            st.warning(f"{len(con_avisos):,} direcciones tienen avisos y conviene revisarlas.")
+        solo_avisos = st.toggle("Ver solo direcciones con avisos", disabled=con_avisos.empty)
+        preview = con_avisos if solo_avisos else cleaned
+        st.dataframe(preview[[ADDRESS_COLUMN, OUTPUT_COLUMN, WARNINGS_COLUMN]].head(50), hide_index=True)
         st.download_button(
             "Descargar CSV limpio",
-            data=cleaned.to_csv(index=False).encode("utf-8-sig"),
+            data=csv_bytes,
             file_name=f"{Path(name).stem}_limpio.csv",
             mime="text/csv",
+            on_click="ignore",
         )

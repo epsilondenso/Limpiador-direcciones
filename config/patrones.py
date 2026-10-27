@@ -238,6 +238,27 @@ PATRONES = [
 #Para ellas solo se eliminan repeticiones consecutivas, no repeticiones con el mismo valor.
 KEYWORDS_NOMBRE = {"CALLE", "AV", "COLONIA", "MUNICIPIO"}
 
+#Abreviaturas de una letra que también pueden ser iniciales ("M. LOPEZ").
+#Solo se reemplazan si les sigue un número o un numeral romano.
+ABREVS_AMBIGUAS = {"M", "M.", "L", "L.", "N", "N."}
+
+#Palabras sin contenido propio: un segmento repetido formado solo por ellas y palabras clave no se elimina.
+STOPWORDS = {"DE", "DEL", "LA", "EL", "LOS", "LAS", "Y", "O", "E", "EN", "A", "AL", "CON"}
+
+#Prefijos (normalizados) que se eliminan junto con el valor redundante de cada columna ("C.P. 77524", "CD. JUAREZ").
+PREFIJOS_CONTEXTO = {
+    "ESTADO": {"ESTADO", "EDO"},
+    "MUNICIPIO": {"MUNICIPIO", "MPIO", "CD", "CIUDAD"},
+    "COLONIA": {"COLONIA", "COL", "FRACC", "FRACCIONAMIENTO", "BARRIO", "BO"},
+    "CP": {"CP"},
+}
+
+#Tipos de vía (normalizados): un valor redundante precedido por uno de ellos es el nombre de la calle y se conserva
+#("Av. JUAREZ" con municipio Juárez).
+TIPOS_VIA = {"CALLE", "AV", "PRIV", "PRIVADA", "CERRADA", "CDA", "BLVD", "BOULEVARD", "CALZ", "CALZADA",
+             "PROL", "PROLONGACION", "CIRCUITO", "CTO", "CIRC", "RETORNO", "RET", "ANDADOR", "CARRETERA",
+             "CAMINO", "PASEO"}
+
 dict_abrevs_path = DICCIONARIOS / "dict_abrev.csv"
 abrev_df= pd.read_csv(dict_abrevs_path)
 abrev_dict= dict(zip(abrev_df['abrev'], abrev_df['significado']))

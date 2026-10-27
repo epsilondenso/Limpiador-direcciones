@@ -70,7 +70,7 @@ Mz,Mz.
 MANZANA,Mz.
 Manzana,Mz.
 manzana,Mz.
-Mnza,Mz
+Mnza,Mz.
 Manz.,Mz.
 MANZ,Mz.
 MANZ.,Mz.
@@ -79,12 +79,12 @@ manz,Mz.
 Mnza.,Mz.
 MNZA,Mz.
 MNZA.,Mz.
-NO, No.
+NO,No.
 NO.,No.
 No.,No.
 no.,No.
 N.,No.
-N, No.
+N,No.
 #,No.
 N°,No.
 Num,No.
@@ -98,12 +98,19 @@ NÚM.,No.
 num,No.
 núm,No.
 num.,No.
-núm,.No.
+núm,No.
 número,No.
-Número,no.
+Número,No.
 NUMERO,No.
 NÚMERO,No.
 VIV,Vivienda
 VIVIENDA,Vivienda
-
-
+S/N.,S/N
+s/n,S/N
+s/n.,S/N
+S/NO,S/N
+S/NO.,S/N
+S/No,S/N
+S/No.,S/N
+s/no,S/N
+s/no.,S/N

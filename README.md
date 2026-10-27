@@ -28,7 +28,10 @@ El CSV de entrada debe contener, al menos, las siguientes columnas (puede tener 
 | `COLONIA`            | Colonia.                          |
 | `CP`                 | Código postal.                    |
 
-La salida es el mismo CSV, preprocesado, con una columna adicional `DIRECCIÓN LIMPIA`.
+La salida es el mismo CSV, preprocesado, con dos columnas adicionales:
+
+* `DIRECCIÓN LIMPIA`: la dirección limpia.
+* `AVISOS`: señala direcciones que conviene revisar a mano, sin modificarlas: `Dirección vacía`, `Sin número` (ni dígitos ni `S/N`) y `Demasiado larga (posible texto legal)` (más de `MAX_TOKENS` = 25 tokens, en `src/pipeline.py`). Si hay varios, se separan con `; `.
 
 Las listas de columnas están definidas en `src/pipeline.py` (`REQUIRED_COLUMNS`, `OUTPUT_COLUMN`).
 
@@ -55,7 +58,7 @@ Limpieza de cada dirección (ver abajo)
 Unión de tokens → columna DIRECCIÓN LIMPIA
 ```
 
-Para cada dirección, además de los patrones genéricos, se eliminan como redundantes el estado, el municipio, la colonia y el CP de su propio registro, ya que esa información existe en sus columnas.
+Para cada dirección, además de los patrones genéricos, se eliminan como redundantes el estado, el municipio, la colonia y el CP de su propio registro, ya que esa información existe en sus columnas (ver [Eliminación de información redundante](#6-eliminación-de-información-redundante)).
 
 La limpieza de una dirección individual sigue las siguientes etapas:
 
@@ -69,13 +72,22 @@ Dirección original
 Reemplazo de abreviaturas
        │
        ▼
- Eliminación de ruido
-       │
-       ▼
 Eliminación de caracteres
        │
        ▼
+Limpieza de puntuación
+       │
+       ▼
+ Eliminación de ruido
+       │
+       ▼
+Eliminación de información redundante
+       │
+       ▼
 Eliminación de duplicados
+       │
+       ▼
+Unificación de mayúsculas
        │
        ▼
 Dirección limpia
@@ -105,7 +117,10 @@ se transforma aproximadamente en:
 ["Av.", "INSURGENTES", "SUR", "No.", "123", "B"]
 ```
 
-La tokenización se realiza mediante una expresión regular.
+La tokenización se realiza mediante una expresión regular, con dos reglas adicionales:
+
+* **Unidades con barra**: `S/N`, `N/A`, `Y/O` (letra/letra) y fracciones como `1/2` se conservan como un solo token, con o sin espacios (`S / N` → `S/N`). `S/NO` también se reconoce y el diccionario lo convierte en `S/N`.
+* **Abreviaturas pegadas**: se separan en el punto cuando antes hay al menos dos letras: `NO.INT.` → `NO.` `INT.`, `FRACC.A` → `FRACC.` `A`. Las siglas como `B.C.S.` no se separan.
 
 ### 2. Reemplazo de abreviaturas
 
@@ -123,9 +138,26 @@ abrev, significado
 
 Esto permite centralizar las abreviaturas y modificar el comportamiento del pipeline sin necesidad de modificar el código.
 
-### 3. Eliminación de ruido
+Las abreviaturas de una sola letra (`M`, `L`, `N`, con o sin punto; `ABREVS_AMBIGUAS` en `config/patrones.py`) también pueden ser iniciales (`M. LOPEZ`) o letras de una sección (`SECCION A-L`). Por eso solo se reemplazan si les sigue, ignorando guiones, un número o un numeral romano: `M I` → `Mz. I`, `L-29` → `Lt. 29`.
 
-Después de reemplazar las abreviaturas, se eliminan expresiones que aportan poca o ninguna información para identificar la ubicación.
+### 3. Eliminación de caracteres
+
+El pipeline permite eliminar determinados caracteres que aparecen como separadores y que no aportan información a la dirección. Se hace antes de buscar patrones, para que un guion no impida una coincidencia.
+
+Por defecto se elimina el guion:
+
+```python
+tokens = clean(direccion)                        # elimina "-"
+tokens = clean(direccion, elim_caracters=False)  # lo conserva
+```
+
+### 4. Limpieza de puntuación
+
+Se eliminan los tokens formados solo por puntos (`.`, `.....`) y las barras `/` sueltas al inicio o al final. Las barras entre palabras (`FRACC. / COL.`) se conservan.
+
+### 5. Eliminación de ruido
+
+Después de reemplazar las abreviaturas y quitar los separadores, se eliminan expresiones que aportan poca o ninguna información para identificar la ubicación.
 
 Las reglas se encuentran en:
 
@@ -157,27 +189,36 @@ Pattern(
 
 El sistema compara los patrones después de normalizar los tokens para evitar que diferencias como mayúsculas, acentos o puntos afecten la comparación.
 
-### 4. Eliminación de caracteres
+### 6. Eliminación de información redundante
 
-El pipeline permite eliminar determinados caracteres que aparecen como separadores y que no aportan información a la dirección.
+El estado, municipio, colonia y CP de cada registro ya están en sus columnas, así que se eliminan de su dirección (`redundant_patterns` y `eliminar_redundantes` en `src/elim_noise.py`):
 
-Por defecto se elimina el guion:
+* **El valor de la columna recibe la misma limpieza que la dirección** (abreviaturas, guiones, puntuación y ruido), para que ambos sean comparables: la colonia `FRACC. TACOTENO` se busca como `TACOTENO`.
+* **Se eliminan todas las apariciones**, no solo la primera: `REAL DE MINAS HERMOSILLO 83285 HERMOSILLO SONORA` → `REAL DE MINAS 83285`.
+* **El prefijo se elimina junto con el valor** (`PREFIJOS_CONTEXTO` en `config/patrones.py`): `C.P. 77524`, `CD. JUAREZ`, `COL. CENTRO`.
+* **Se conservan las apariciones que parecen nombre de calle**:
+  * las precedidas por un tipo de vía (`TIPOS_VIA` en `config/patrones.py`): `Av. JUAREZ 120` con municipio Juárez se conserva;
+  * si el valor aparece más de una vez, la que está al inicio de la dirección: `VILLA FONTANA SUR … VILLA FONTANA RESIDENCIAL` → `VILLA FONTANA SUR … RESIDENCIAL`.
+* **Se ignoran los valores sin contenido**, es decir, sin ningún token de 3 o más caracteres (`0`, `N/A`), y los `Sin info`.
+* **Si el valor ocupa toda la dirección** (la columna contiene la dirección por error de captura), no se elimina.
 
-```python
-tokens = clean(direccion)                        # elimina "-"
-tokens = clean(direccion, elim_caracters=False)  # lo conserva
-```
+### 7. Eliminación de duplicados
 
-### 5. Eliminación de duplicados
+Las palabras clave son los significados del diccionario de abreviaturas (`Calle`, `Av.`, `No.`, `Mz.`, `Lt.`, `Int.`, `Ext.`, …). Los duplicados se eliminan sin perder información, en este orden:
 
-Las palabras clave son los significados del diccionario de abreviaturas (`Calle`, `Av.`, `No.`, `Mz.`, `Lt.`, `Int.`, `Ext.`, …). Se eliminan sus duplicados sin perder información:
+1. **Segmentos repetidos**: se elimina un segmento de 3 o más tokens idéntico a uno anterior, como `Av. TOLUCA S/N 0001 0001 Av. TOLUCA S/N` → `Av. TOLUCA S/N 0001 0001`. Solo se aplica si el segmento contiene un número (o `S/N`) y al menos dos tokens que no son palabras clave ni stopwords (`STOPWORDS` en `config/patrones.py`). Así no se eliminan coincidencias parciales de nombres, como `B DE LA` en `Calle CERRADA B DE LA Calle CAFETOS`.
+2. **Repeticiones consecutivas** de una palabra clave o de una palabra de 3 o más letras: `Calle Calle 16` → `Calle 16`, `CHAMAPA CHAMAPA` → `CHAMAPA`.
+3. **Pares palabra clave-valor repetidos**: `Mz. 8 Lt. 11 … Mz. 8` → `Mz. 8 Lt. 11 …`. El valor es el primer token que no es palabra clave, así que `No. Ext. 4126 No. Int. A` se conserva.
 
-1. **Repeticiones consecutivas**: `Calle Calle 16` → `Calle 16`.
-2. **Pares palabra clave-valor repetidos**: `Mz. 8 Lt. 11 … Mz. 8` → `Mz. 8 Lt. 11 …`. El valor es el primer token que no es palabra clave, así que `No. Ext. 4126 No. Int. A` se conserva.
-
-Las repeticiones con valores distintos (`Mz. XLI Mz. 41`, `Lt. 29 y parte del Lt. 30`) se conservan, porque contienen información distinta. Las palabras clave cuyo valor es un nombre de varias palabras (`KEYWORDS_NOMBRE` en `config/patrones.py`: `Calle`, `Av.`, `Colonia`, `Municipio`) solo pasan por el punto 1; si no, `ENTRE Av. LAGUNA EL MANGAL` perdería parte del nombre.
+Las repeticiones con valores distintos (`Mz. XLI Mz. 41`, `Lt. 29 y parte del Lt. 30`) se conservan, porque contienen información distinta. Las palabras clave cuyo valor es un nombre de varias palabras (`KEYWORDS_NOMBRE` en `config/patrones.py`: `Calle`, `Av.`, `Colonia`, `Municipio`) no pasan por el punto 3; si no, `ENTRE Av. LAGUNA EL MANGAL` perdería parte del nombre.
 
 Se puede desactivar con `clean(direccion, elim_duplicados=False)`.
+
+### 8. Unificación de mayúsculas
+
+Todo se pasa a mayúsculas, conservando los acentos, salvo las palabras clave del diccionario, que mantienen su forma (`Calle`, `Mz.`, `No.`): `Privada San José No. 44` → `PRIVADA SAN JOSÉ No. 44`.
+
+Se puede desactivar con `clean(direccion, mayusculas=False)`.
 
 ## Estructura del proyecto
 
@@ -208,6 +249,7 @@ LIMPIEZA_DIRECCIONES/
 │   ├── clean_adresses_file.py
 │   ├── elim_duplicados.py
 │   ├── elim_noise.py
+│   ├── formato.py
 │   ├── pipeline.py
 │   ├── replace_abrev.py
 │   └── __init__.py
@@ -229,7 +271,10 @@ Contiene la lógica principal del proyecto.
   Normalización de tokens, búsqueda de patrones y eliminación de expresiones consideradas ruido.
 
 * **`elim_duplicados.py`**
-  Eliminación de palabras clave duplicadas.
+  Eliminación de segmentos y palabras clave duplicados.
+
+* **`formato.py`**
+  Limpieza de puntuación y unificación de mayúsculas.
 
 * **`cleaning_pipe.py`**
   Integra las diferentes etapas en un único pipeline para **una** dirección (`clean`).
@@ -246,7 +291,7 @@ Contiene configuraciones y reglas utilizadas por el pipeline.
 
 * **`paths.py`**: define las rutas principales del proyecto.
 * **`abrev_estados.py`**: mapa de abreviaturas de estados a su nombre completo (`ESTADOS_MAP`).
-* **`patrones.py`**: contiene los patrones utilizados para identificar y eliminar ruido, así como la carga del diccionario de abreviaturas.
+* **`patrones.py`**: contiene los patrones utilizados para identificar y eliminar ruido, la carga del diccionario de abreviaturas y las listas `KEYWORDS_NOMBRE`, `ABREVS_AMBIGUAS` y `STOPWORDS`.
 
 ### `datos/`
 
@@ -443,9 +488,13 @@ Tokenización
      │
      ├── Reemplazo de abreviaturas
      │
-     ├── Eliminación de ruido
+     ├── Eliminación de caracteres y puntuación
      │
-     └── Eliminación de caracteres
+     ├── Eliminación de ruido e información redundante
+     │
+     ├── Eliminación de duplicados
+     │
+     └── Unificación de mayúsculas
 ```
 
 Esto permite modificar o ampliar cada etapa independientemente.
@@ -464,7 +513,9 @@ El proyecto se encuentra en desarrollo. Actualmente el pipeline contempla:
 * [x] Detección de patrones.
 * [x] Eliminación de ruido textual.
 * [x] Eliminación configurable de caracteres.
-* [x] Eliminación de palabras clave duplicadas.
+* [x] Eliminación de segmentos y palabras clave duplicados.
+* [x] Limpieza de puntuación y unificación de mayúsculas.
+* [x] Avisos para revisión manual.
 * [x] Procesamiento de archivos de direcciones.
 * [x] Procesamiento de `DataFrame` en memoria (base para la app).
 * [x] App de Streamlit para subir un CSV y descargar la versión limpia.
